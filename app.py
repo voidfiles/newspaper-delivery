@@ -1,5 +1,14 @@
+# First have to monkey patch ntlk to find it data in a local directory
+import os
+from nltk import data
+
+current_path = os.path.dirname(os.path.realpath(__file__))
+nltk_data = os.path.join(current_path, 'nltk_data', '')
+data.path = [nltk_data]
+
 from flask import Flask
 from flask.ext.restful import Resource, Api, reqparse
+
 
 import newspaper
 
