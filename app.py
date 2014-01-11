@@ -4,6 +4,7 @@ from flask.ext.restful import Resource, Api, reqparse
 import newspaper
 
 app = Flask(__name__)
+app.config['DEBUG'] = True
 api = Api(app)
 
 config = newspaper.Config()
