@@ -9,7 +9,7 @@ git clone https://github.com/voidfiles/newspaper-delivery.git
 cd newspaper-delivery
 virtualenv --no-site-packages venv
 source venv/bin/activate
-pip install -r requirements.py
+pip install -r requirements.txt
 python app.py
 ```
 
