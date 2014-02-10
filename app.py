@@ -18,6 +18,7 @@ api = Api(app)
 
 config = newspaper.Config()
 config.is_memoize_articles = False
+config.keep_article_html = True
 
 article_parser = reqparse.RequestParser()
 article_parser.add_argument('url', type=unicode, help='The url of the site to scrape')
@@ -27,7 +28,7 @@ class ArticleSimple(Resource):
     def get(self):
         args = article_parser.parse_args()
         url = args['url']
-        article = newspaper.build_article(url)
+        article = newspaper.build_article(url, config)
         article.download()
         article.parse()
         article.nlp()
@@ -38,6 +39,7 @@ class ArticleSimple(Resource):
             'top_image': article.top_img,
             'images': [x for x in article.imgs],
             'text': article.text,
+            'html': article.article_html,
             'keywords': article.keywords,
             'authors': article.authors,
             'summary': article.authors,
