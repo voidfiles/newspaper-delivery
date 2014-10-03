@@ -8,7 +8,7 @@ data.path = [nltk_data]
 
 from urllib import quote
 
-from flask import Flask, make_response, redirect
+from flask import Flask, make_response, redirect, abort
 from flask.ext.restful import Resource, Api, reqparse
 from flask.ext.restful.representations.json import output_json
 
@@ -70,76 +70,79 @@ class ArticleSimple(Resource):
         output_format = args['format']
         article = newspaper.build_article(url, config)
         article.download()
-        article.parse()
-        article.nlp()
+        if article.html == "":
+            abort(404)
+        else:
+            article.parse()
+            article.nlp()
 
-        markdownify = bool(args['markdownify'])
-        text = article.text
-        if markdownify:
-            h = HTML2Text(baseurl=args['url'])
-            h.body_width = 0
-            text = h.handle(article.article_html)
+            markdownify = bool(args['markdownify'])
+            text = article.text
+            if markdownify:
+                h = HTML2Text(baseurl=args['url'])
+                h.body_width = 0
+                text = h.handle(article.article_html)
 
-        data = {
-            'url': article.url,
-            'title': article.title,
-            'top_image': article.top_img,
-            'images': [x for x in article.imgs],
-            'text': text,
-            'html': article.article_html,
-            'keywords': article.keywords,
-            'authors': article.authors,
-            'summary': article.summary,
-            'meta_description': article.meta_description,
-            'meta_lang': article.meta_lang,
-            'meta_favicon': article.meta_favicon,
-            'meta_keywords': article.meta_keywords,
-            'canonical_link': article.canonical_link,
-            'tags': [unicode(x) for x in article.tags],
-            'movies': article.movies,
-            'additional_data': article.additional_data,
-        }
+            data = {
+                'url': article.url,
+                'title': article.title,
+                'top_image': article.top_img,
+                'images': [x for x in article.imgs],
+                'text': text,
+                'html': article.article_html,
+                'keywords': article.keywords,
+                'authors': article.authors,
+                'summary': article.summary,
+                'meta_description': article.meta_description,
+                'meta_lang': article.meta_lang,
+                'meta_favicon': article.meta_favicon,
+                'meta_keywords': article.meta_keywords,
+                'canonical_link': article.canonical_link,
+                'tags': [unicode(x) for x in article.tags],
+                'movies': article.movies,
+                'additional_data': article.additional_data,
+            }
 
-        if output_format == 'json':
-            return output_json(data, 200, {})
+            if output_format == 'json':
+                return output_json(data, 200, {})
 
-        if output_format == 'text':
-            output = u'---\n'
-            output += u'link: %s\n' % (article.url)
-            output += u'title: %s\n' % (article.title)
-            output += u'authors: %s\n' % (u', '.join(article.authors))
-            output += u'keywords: %s\n' % (u', '.join(article.keywords))
-            output += u'---\n\n'
-            if args['include_summary']:
-                output += u'# Summary\n\n%s\n' % (article.summary)
+            if output_format == 'text':
+                output = u'---\n'
+                output += u'link: %s\n' % (article.url)
+                output += u'title: %s\n' % (article.title)
+                output += u'authors: %s\n' % (u', '.join(article.authors))
+                output += u'keywords: %s\n' % (u', '.join(article.keywords))
+                output += u'---\n\n'
+                if args['include_summary']:
+                    output += u'# Summary\n\n%s\n' % (article.summary)
 
-            output += text
+                output += text
 
-            r = args.get('redirect')
-            if r and r in ['nvalt', 'notsey']:
-                title = u'%s - %s' % (article.title, u', '.join(article.authors))
-                title = title.encode('utf-8')
-                output = output.encode('utf-8')
+                r = args.get('redirect')
+                if r and r in ['nvalt', 'notsey']:
+                    title = u'%s - %s' % (article.title, u', '.join(article.authors))
+                    title = title.encode('utf-8')
+                    output = output.encode('utf-8')
 
-                if r == 'nvalt':
-                    opts = {
-                        'txt': output,
-                        'title': title,
-                    }
-                    opts = '&'.join(['%s=%s' % (key, quote(val)) for key, val in opts.items()])
-                    url = 'nvalt://make/?' + opts
+                    if r == 'nvalt':
+                        opts = {
+                            'txt': output,
+                            'title': title,
+                        }
+                        opts = '&'.join(['%s=%s' % (key, quote(val)) for key, val in opts.items()])
+                        url = 'nvalt://make/?' + opts
 
-                if r == 'notsey':
-                    opts = {
-                        'text': output,
-                        'name': title,
-                    }
-                    opts = '&'.join(['%s=%s' % (key, quote(val)) for key, val in opts.items()])
-                    url = 'notesy://x-callback-url/append?' + opts
+                    if r == 'notsey':
+                        opts = {
+                            'text': output,
+                            'name': title,
+                        }
+                        opts = '&'.join(['%s=%s' % (key, quote(val)) for key, val in opts.items()])
+                        url = 'notesy://x-callback-url/append?' + opts
 
-                return make_response(redirect(url))
+                    return make_response(redirect(url))
 
-            return output_text(output, 200, {'Content-Type': 'text'})
+                return output_text(output, 200, {'Content-Type': 'text'})
 
 site_parser = reqparse.RequestParser()
 site_parser.add_argument('url', type=unicode, help='The url of the site to scrape')
